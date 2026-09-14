@@ -5,7 +5,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # Project root directory
-# Adjust parents[2] if your config.py is located elsewhere.
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 
@@ -15,6 +14,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
 
     # API Keys
+    hf_token: str = ""
     groq_api_key: str = ""
     tavily_api_key: str = ""
     pinecone_api_key: str = ""
