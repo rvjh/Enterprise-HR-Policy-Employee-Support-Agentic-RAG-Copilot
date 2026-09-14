@@ -1,46 +1,85 @@
 # Enterprise HR Policy & Employee Support Agentic RAG Copilot
 
-An end-to-end Forward Deployed Engineer (FDE) project that converts an Agentic RAG workflow into a deployable internal HR product using LangGraph, FastAPI, Pinecone, OpenAI, Tavily, HTML, CSS, and JavaScript.
+ An end-to-end **Forward Deployed Engineer (FDE)** project that transforms an Agentic RAG workflow into a deployable internal HR product using **LangGraph, FastAPI, Pinecone, Groq, Hugging Face Embeddings, Tavily, HTML, CSS, and JavaScript**.
 
-## 1. Business Problem
+ The system provides employees with grounded answers to HR policy questions by prioritizing the company's private HR knowledge base and using web search only when internal evidence is insufficient.
 
-### Customer
-NovaRetail, a fictional 3,000-employee retail company.
+---
 
-### Problem
-The HR team maintains many internal documents: leave policies, remote-work rules, payroll guidance, benefits information, onboarding procedures, conduct policies, and HR operations runbooks.
+ ## 1\. Business Problem
 
-Employees still send repetitive HR questions because they do not know where the correct policy lives, keyword search returns too many documents, generic chatbots may invent policy details, internal documents may not cover current public regulations, and some questions require fresh external information.
+ ### Customer
 
-### Example
-An employee asks:
+ **NovaRetail**, a fictional 3,000-employee retail company.
 
-> “How many annual leave days do employees receive?”
+ ### Problem
 
-The answer exists in the private company HR knowledge base, so the system should answer from internal policy without searching the public internet.
+ The HR team maintains many internal documents, including:
 
-Another employee asks:
+ - Leave and vacation policies
+- Remote-work rules
+- Payroll guidance
+- Benefits information
+- Employee onboarding procedures
+- Code of conduct policies
+- HR operations runbooks
 
-> “What are the latest public holiday rules in Bangladesh?”
+ Employees still ask repetitive HR questions because:
 
-The internal KB may not contain current public information. The system should recognize weak private evidence, use external search, grade the evidence, and clearly identify the answer as external information requiring HR validation.
+ - They do not know where the correct policy is located.
+- Traditional keyword search can return too many irrelevant documents.
+- Generic chatbots may hallucinate or invent policy details.
+- Internal documents may not contain current public information.
+- Some questions require fresh external information.
 
-### Business Goal
-Build a secure HR Policy Copilot that:
+ ### Example 1 — Private Company Policy
 
-1. Searches trusted private HR knowledge first.
-2. Checks whether retrieved evidence is sufficient.
+ An employee asks:
+
+ > "How many annual leave days do employees receive?"
+
+ The answer exists in the company's private HR knowledge base.
+
+ The system should answer using the internal HR documents without searching the public internet.
+
+ ### Example 2 — Current External Information
+
+ Another employee asks:
+
+ > "What are the latest public holiday rules in Bangladesh?"
+
+ The internal HR knowledge base may not contain current public information.
+
+ The system should:
+
+ 1. Search the private HR knowledge base first.
+2. Determine whether the retrieved evidence is sufficient.
+3. Fall back to web search if the private evidence is insufficient.
+4. Evaluate the external evidence.
+5. Generate an answer clearly identified as external information that may require HR validation.
+
+ ### Business Goal
+
+ Build a secure HR Policy Copilot that:
+
+ 1. Searches trusted private HR knowledge first.
+2. Evaluates whether retrieved evidence is sufficient.
 3. Uses web search only when private knowledge is insufficient.
-4. Rewrites weak queries and retries.
-5. Generates grounded answers.
+4. Rewrites weak or ambiguous queries and retries retrieval.
+5. Generates grounded answers based on retrieved evidence.
 6. Shows the LangGraph decision path for transparency and debugging.
-7. Lets authorized HR staff add new company documents.
+7. Allows authorized HR staff to add new company documents.
+8. Maintains an audit trail of agent decisions.
 
-## 2. Why This Is an FDE Project
+---
 
-A Forward Deployed Engineer does more than build an LLM notebook. The FDE translates a customer problem into a usable product:
+ ## 2\. Why This Is an FDE Project
 
-```text
+ A Forward Deployed Engineer does more than build an LLM prototype or notebook.
+
+ The FDE translates a real customer problem into a usable, deployable product:
+
+```
 Customer Problem
       ↓
 Discovery & Requirements
@@ -62,100 +101,257 @@ Deployment
 Observe + Improve
 ```
 
-## 3. Simple Architecture
+ This project demonstrates that complete lifecycle:
 
-![System architecture](docs/architecture.png)
+ - Business problem definition
+- Agent architecture
+- Private knowledge integration
+- Vector search
+- LLM orchestration
+- External search fallback
+- API development
+- Frontend development
+- Document ingestion
+- Audit logging
+- Dockerization
+- Production-oriented configuration
 
-```text
-Employee / HR User
-        ↓
-HTML/CSS/JavaScript Web UI
-        ↓ POST /api/chat
-FastAPI
-        ↓
-LangGraph Agentic RAG Controller
-        ↓
- ┌───────────────┬─────────────────┐
- ↓               ↓
-Private HR KB    Tavily Web Search
-Pinecone         (fallback only)
- └───────┬───────┘
-         ↓
-OpenAI LLM
-Grounded Answer
+---
+
+ ## 3\. System Architecture
+
+```
+                    Employee / HR User
+                           │
+                           ▼
+                  HTML / CSS / JavaScript
+                           │
+                           │ POST /api/chat
+                           ▼
+                        FastAPI
+                           │
+                           ▼
+                LangGraph Agentic RAG
+                     Controller
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+             ▼                           ▼
+      Private HR Knowledge          Tavily Web Search
+           Pinecone                 (Fallback Only)
+             │                           │
+             └─────────────┬─────────────┘
+                           │
+                           ▼
+                         Groq
+                    LLM Inference
+                           │
+                           ▼
+                   Grounded Answer
+                           │
+             ┌─────────────┴─────────────┐
+             ▼                           ▼
+        Citations                    Audit / Trace
+                                      SQLite
 ```
 
-## 4. Agentic RAG Workflow
+ ### Core Design Principle
 
-```text
+ The application follows a **private-first retrieval strategy**:
+
+```
+User Question
+      ↓
+Private HR Knowledge Base
+      ↓
+Is evidence sufficient?
+   ┌──┴──┐
+  YES    NO
+   ↓      ↓
+Answer   Tavily Web Search
+          ↓
+       Grade Evidence
+          ↓
+        Answer
+```
+
+ This reduces unnecessary external searches and helps keep company-specific answers grounded in internal policy.
+
+---
+
+ ## 4\. Agentic RAG Workflow
+
+ The application uses **LangGraph** to orchestrate routing, retrieval, evidence grading, query rewriting, and answer generation.
+
+```
 Question
    ↓
 [1] Route Question
-   ├── Greeting / simple chat ─────────→ Direct Answer
    │
-   └── HR / policy question
-                ↓
+   ├── Greeting / Simple Chat
+   │          ↓
+   │     Direct Answer
+   │
+   └── HR / Policy Question
+              ↓
 [2] Retrieve from Private Pinecone KB
-                ↓
+              ↓
 [3] Grade Private Evidence
-       ┌────────┴────────┐
-       │                 │
-     GOOD               WEAK
-       │                 │
-       ▼                 ▼
-Generate from KB   [4] Tavily Web Search
-                         ↓
-                  [5] Grade Web Evidence
-                    ┌────┴─────┐
-                    │          │
-                  GOOD        WEAK
-                    │          │
-                    ▼          ▼
-              Generate Web  [6] Rewrite Query
-                               ↓
-                         Retry Private KB
-                               ↓
-                        Max retry reached?
-                               ↓
-                    Insufficient Evidence
+              │
+        ┌─────┴─────┐
+        │           │
+      GOOD         WEAK
+        │           │
+        ▼           ▼
+ Generate from   [4] Tavily Web Search
+ Private KB              ↓
+                   [5] Grade Web Evidence
+                         │
+                    ┌────┴────┐
+                    │         │
+                  GOOD       WEAK
+                    │         │
+                    ▼         ▼
+              Generate Web   [6] Rewrite Query
+              Answer             ↓
+                           Retry Private KB
+                                ↓
+                         Max Retry Reached?
+                                ↓
+                       Insufficient Evidence
 ```
 
-## 5. Technology Stack
+ ### Agent Responsibilities
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| Agent workflow | LangGraph | Stateful routing and conditional decisions |
-| LLM | OpenAI | Routing, grading, rewriting, answer generation |
-| Embeddings | OpenAI `text-embedding-3-small` | Vector embeddings |
-| Vector DB | Pinecone | Private enterprise HR knowledge base |
-| External search | Tavily | Fallback when company HR KB is insufficient |
-| API | FastAPI | Backend and REST endpoints |
-| Frontend | HTML/CSS/JavaScript | Employee-facing interface |
-| Audit | SQLite | Decision-path logging |
-| Packaging | Docker | Reproducible deployment |
+ | Component | Responsibility |
+| --- | --- |
+| Router | Determines the type of user question |
+| Private Retriever | Searches the internal HR knowledge base |
+| Private Evidence Grader | Determines whether private evidence is relevant |
+| Web Search | Retrieves current external information when required |
+| Web Evidence Grader | Evaluates external search results |
+| Query Rewriter | Improves weak or ambiguous queries |
+| Answer Generator | Produces grounded responses |
+| Audit Layer | Records workflow decisions and execution trace |
 
-## 6. Project Structure
+---
 
-```text
+ ## 5\. Technology Stack
+
+ | Layer | Technology | Purpose |
+| --- | --- | --- |
+| Agent Workflow | LangGraph | Stateful workflow, routing, and conditional decisions |
+| LLM | Groq | Fast LLM inference for routing, grading, rewriting, and answer generation |
+| LLM Model | `openai/gpt-oss-120b` | Primary language model |
+| Embeddings | Hugging Face | Converts HR documents and queries into vector representations |
+| Embedding Model | `Octen/Octen-Embedding-0.6B` | Generates document/query embeddings |
+| Vector Database | Pinecone | Stores and retrieves private HR knowledge |
+| External Search | Tavily | Fallback search for current public information |
+| API | FastAPI | Backend REST API |
+| Frontend | HTML/CSS/JavaScript | Employee-facing web interface |
+| Audit | SQLite | Workflow and decision-path logging |
+| Packaging | Docker | Reproducible application deployment |
+
+---
+
+ ## 6\. Models
+
+ ### LLM
+
+ The application uses **Groq** for LLM inference.
+
+```
+Provider: Groq
+Model: openai/gpt-oss-120b
+```
+
+ The Groq model is used for tasks such as:
+
+ - Question routing
+- Evidence grading
+- Query rewriting
+- Answer generation
+- Agent decision-making
+
+ ### Embeddings
+
+ The application uses a Hugging Face embedding model:
+
+```
+Model: Octen/Octen-Embedding-0.6B
+```
+
+ The embedding model converts both documents and user queries into numerical vectors.
+
+```
+HR Document
+    ↓
+Hugging Face Embedding Model
+    ↓
+Vector Representation
+    ↓
+Pinecone
+```
+
+ At query time:
+
+```
+User Question
+    ↓
+Hugging Face Embedding Model
+    ↓
+Query Vector
+    ↓
+Pinecone Similarity Search
+    ↓
+Relevant HR Documents
+```
+
+---
+
+ ## 7\. Project Structure
+
+```
 Enterprise-HR-Policy-Agentic-RAG-Copilot/
+│
 ├── app/
-│   ├── api/routes.py
-│   ├── core/config.py
-│   ├── core/logging.py
-│   ├── rag/state.py
-│   ├── rag/vectorstore.py
-│   ├── rag/workflow.py
-│   ├── services/audit.py
-│   ├── services/ingestion.py
+│   ├── api/
+│   │   └── routes.py
+│   │
+│   ├── core/
+│   │   ├── config.py
+│   │   └── logging.py
+│   │
+│   ├── rag/
+│   │   ├── state.py
+│   │   ├── vectorstore.py
+│   │   └── workflow.py
+│   │
+│   ├── services/
+│   │   ├── audit.py
+│   │   └── ingestion.py
+│   │
 │   └── main.py
-├── data/sample_kb/
-│   ├── company_hr_handbook.md
-│   └── hr_operations_runbook.md
+│
+├── data/
+│   └── sample_kb/
+│       ├── company_hr_handbook.md
+│       └── hr_operations_runbook.md
+│
 ├── static/
-│   ├── css/style.css
-│   └── js/app.js
-├── templates/index.html
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── app.js
+│
+├── templates/
+│   └── index.html
+│
 ├── uploads/
+│
+├── docs/
+│   └── architecture.png
+│
 ├── Dockerfile
 ├── ingest_sample_kb.py
 ├── requirements.txt
@@ -163,100 +359,653 @@ Enterprise-HR-Policy-Agentic-RAG-Copilot/
 └── README.md
 ```
 
-## 7. Setup
+---
 
-### Step 1 — Create and activate a virtual environment
+ ## 8\. Setup
 
-```bash
+ ### Step 1 — Clone the Repository
+
+```
+git clone <your-repository-url>
+cd Enterprise-HR-Policy-Agentic-RAG-Copilot
+```
+
+ ### Step 2 — Create a Virtual Environment
+
+```
 python -m venv venv
 ```
 
-Windows:
+ #### Windows
 
-```bash
+```
 venv\Scripts\activate
 ```
 
-macOS/Linux:
+ #### macOS/Linux
 
-```bash
+```
 source venv/bin/activate
 ```
 
-### Step 2 — Install dependencies
+ ### Step 3 — Install Dependencies
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
-### Step 3 — Configure environment
+---
 
-Copy `.env.example` to `.env` and add your keys.
+ ## 9\. Environment Configuration
 
-```env
-OPENAI_API_KEY=your_openai_api_key_here
-TAVILY_API_KEY=your_tavily_api_key_here
+ Create a `.env` file based on `.env.example`.
+
+ Example:
+
+```
+# Groq
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=openai/gpt-oss-120b
+
+# Hugging Face
+HUGGINGFACE_EMBEDDINGS_MODEL=Octen/Octen-Embedding-0.6B
+
+# Pinecone
 PINECONE_API_KEY=your_pinecone_api_key_here
 PINECONE_INDEX_NAME=fde-hr-policy-rag
 PINECONE_NAMESPACE=company-hr-kb
-OPENAI_MODEL=gpt-4o-mini
-EMBEDDING_MODEL=text-embedding-3-small
+
+# Tavily
+TAVILY_API_KEY=your_tavily_api_key_here
+
+# Application
 ADMIN_API_KEY=change-me-in-production
 APP_ENV=development
 ```
 
-### Step 4 — Load sample HR knowledge
+ ### Environment Variables
 
-```bash
+ | Variable | Description |
+| --- | --- |
+| `GROQ_API_KEY` | API key used for Groq LLM inference |
+| `GROQ_MODEL` | Groq model used by the application |
+| `HUGGINGFACE_EMBEDDINGS_MODEL` | Hugging Face embedding model |
+| `PINECONE_API_KEY` | Pinecone API key |
+| `PINECONE_INDEX_NAME` | Pinecone index name |
+| `PINECONE_NAMESPACE` | Namespace containing company HR data |
+| `TAVILY_API_KEY` | Tavily API key for external search |
+| `ADMIN_API_KEY` | Key protecting HR document ingestion |
+| `APP_ENV` | Application environment |
+
+ > **Security:** Never commit `.env` or API keys to Git. Use environment variables or a production secret-management solution.
+
+---
+
+ ## 10\. Load Sample HR Knowledge
+
+ After configuring Pinecone and the required API keys, ingest the sample HR documents:
+
+```
 python ingest_sample_kb.py
 ```
 
-### Step 5 — Run the application
+ The ingestion pipeline performs approximately:
 
-```bash
+```
+HR Documents
+      ↓
+Document Loading
+      ↓
+Text Splitting / Chunking
+      ↓
+Hugging Face Embeddings
+      ↓
+Vector Generation
+      ↓
+Pinecone
+      ↓
+Private HR Knowledge Base
+```
+
+---
+
+ ## 11\. Run the Application
+
+ Start the application:
+
+```
 python run.py
 ```
 
-Open `http://127.0.0.1:8080` and FastAPI docs at `http://127.0.0.1:8080/docs`.
+ The application will be available at:
 
-## 8. Classroom Demo Scenarios
+```
+http://127.0.0.1:8080
+```
 
-### Demo A — Private KB Success
-Ask: **How many annual leave days do employees receive?**
+ FastAPI Swagger documentation:
 
-Expected path:
+```
+http://127.0.0.1:8080/docs
+```
 
-```text
-Router → KB
+---
+
+ ## 12\. Classroom Demo Scenarios
+
+ ### Demo A — Private Knowledge Base Success
+
+ Ask:
+
+ > **How many annual leave days do employees receive?**
+
+ Expected workflow:
+
+```
+Router
+   ↓
 Private KB Retrieval
-KB Grade → GOOD
+   ↓
+Private Evidence Grade → GOOD
+   ↓
 Generate from Private KB
 ```
 
-### Demo B — Company Policy Question
-Ask: **How many days per week can I work remotely?**
+ The answer should come from the internal HR handbook.
 
-Expected result: answer from the internal HR handbook, without web search.
+ No web search should be required.
 
-### Demo C — External / Current Information
-Ask: **What are the latest public holiday rules in Bangladesh?**
+---
 
-Expected path when internal HR documents are insufficient:
+ ### Demo B — Company Remote-Work Policy
 
-```text
-Router → KB
+ Ask:
+
+ > **How many days per week can I work remotely?**
+
+ Expected behavior:
+
+```
+Router
+   ↓
 Private KB Retrieval
-KB Grade → WEAK
-Tavily Search
-Web Grade → GOOD
-Web Answer
+   ↓
+Evidence Grade → GOOD
+   ↓
+Generate from Private HR Policy
 ```
 
-### Demo D — Weak Query Rewrite
-Ask an ambiguous HR question such as: **What happens if mine is wrong?**
+ The system should answer using the company's internal HR documentation.
 
-If neither private nor web evidence is sufficient, the workflow can rewrite the query, retry the KB, and eventually stop with insufficient evidence rather than hallucinating.
+---
 
-## 9. What Changed From the IT Support Reference
+ ### Demo C — Current External Information
 
-The application structure, graph topology, API shape, retrieval logic, ingestion layer, audit layer, Docker setup, and frontend behavior remain the same. Only domain-specific elements were changed: HR prompts, HR configuration names, UI wording, example questions, sample documents, and documentation.
+ Ask:
+
+ > **What are the latest public holiday rules in Bangladesh?**
+
+ Expected workflow when the private KB does not contain sufficient information:
+
+```
+Router
+   ↓
+Private KB Retrieval
+   ↓
+Private Evidence Grade → WEAK
+   ↓
+Tavily Web Search
+   ↓
+Web Evidence Grade → GOOD
+   ↓
+Generate External Answer
+```
+
+ The response should make it clear that the information comes from external sources and may require HR validation.
+
+---
+
+ ### Demo D — Weak / Ambiguous Query
+
+ Ask:
+
+ > **What happens if mine is wrong?**
+
+ The question is intentionally ambiguous.
+
+ The workflow can:
+
+```
+Question
+   ↓
+Private KB Search
+   ↓
+Evidence → WEAK
+   ↓
+Web Search
+   ↓
+Evidence → WEAK
+   ↓
+Rewrite Query
+   ↓
+Retry Private KB
+   ↓
+Maximum Retry Reached
+   ↓
+Insufficient Evidence
+```
+
+ Instead of inventing an answer, the system should indicate that there is insufficient evidence.
+
+---
+
+ ## 13\. Document Ingestion
+
+ Authorized HR users can add new company documents through the application.
+
+ The ingestion flow is:
+
+```
+HR User
+   ↓
+Upload Document
+   ↓
+FastAPI /api/ingest
+   ↓
+Document Processing
+   ↓
+Chunking
+   ↓
+Hugging Face Embeddings
+   ↓
+Pinecone
+   ↓
+Updated HR Knowledge Base
+```
+
+ The ingestion endpoint is protected using an administrative API key.
+
+ Example request header:
+
+```
+X-Admin-Key: <ADMIN_API_KEY>
+```
+
+---
+
+ ## 14\. API Endpoints
+
+ ### Chat
+
+```
+POST /api/chat
+```
+
+ Example request:
+
+```
+{
+  "question": "How many annual leave days do employees receive?"
+}
+```
+
+ Example response:
+
+```
+{
+  "answer": "Employees receive ...",
+  "source_used": "private_kb",
+  "citations": [],
+  "trace": [
+    "Route question",
+    "Retrieve private KB",
+    "Grade private evidence",
+    "Generate answer"
+  ]
+}
+```
+
+ ### Document Ingestion
+
+```
+POST /api/ingest
+```
+
+ Used by authorized HR users to upload new documents to the private knowledge base.
+
+---
+
+ ## 15\. Observability and Audit
+
+ The application exposes the LangGraph execution path so developers and HR administrators can understand how an answer was produced.
+
+ Example trace:
+
+```
+Route question
+      ↓
+Private KB retrieval
+      ↓
+Private evidence grading
+      ↓
+Evidence sufficient
+      ↓
+Generate grounded answer
+```
+
+ For a fallback scenario:
+
+```
+Route question
+      ↓
+Private KB retrieval
+      ↓
+Private evidence weak
+      ↓
+Tavily web search
+      ↓
+Web evidence grading
+      ↓
+Generate external answer
+```
+
+ The audit layer stores workflow information using SQLite.
+
+ This helps with:
+
+ - Debugging
+- Agent observability
+- Workflow analysis
+- Evaluating retrieval quality
+- Understanding fallback behavior
+- Identifying failure cases
+
+---
+
+ ## 16\. Grounding Strategy
+
+ The system is designed around a **retrieve → grade → generate** pattern.
+
+ Instead of directly asking the LLM to answer:
+
+```
+Question
+   ↓
+LLM
+   ↓
+Answer
+```
+
+ the application uses:
+
+```
+Question
+   ↓
+Retrieve Evidence
+   ↓
+Grade Evidence
+   ↓
+Generate Grounded Answer
+```
+
+ This provides an additional control layer between the user's question and the final answer.
+
+ ### Private Knowledge Priority
+
+ The system prioritizes company-specific information:
+
+```
+Private HR KB
+      ↓
+Is evidence sufficient?
+      │
+      ├── YES → Use private evidence
+      │
+      └── NO → Search external sources
+```
+
+ This is important for HR applications because company policies should generally take precedence over generic internet information when answering company-specific questions.
+
+---
+
+ ## 17\. Security Considerations
+
+ This project is designed as a demonstration/reference implementation and should be hardened before production deployment.
+
+ Recommended production improvements include:
+
+ - Authentication and authorization
+- Role-based access control
+- Employee identity integration
+- Secure secret management
+- API rate limiting
+- Input validation
+- File-type and file-size validation
+- Malware scanning for uploaded documents
+- PII detection and redaction
+- Encryption at rest and in transit
+- Detailed audit logging
+- Document-level access control
+- Tenant isolation
+- Monitoring and alerting
+
+ The `ADMIN_API_KEY` mechanism is intended for demonstration purposes and should be replaced with proper authentication and authorization in production.
+
+---
+
+ ## 18\. Docker
+
+ Build the Docker image:
+
+```
+docker build -t enterprise-hr-rag .
+```
+
+ Run the container:
+
+```
+docker run --env-file .env -p 8080:8080 enterprise-hr-rag
+```
+
+ Then open:
+
+```
+http://127.0.0.1:8080
+```
+
+---
+
+ ## 19\. End-to-End Data Flow
+
+ ### Private HR Question
+
+```
+Employee
+   ↓
+Web UI
+   ↓
+FastAPI
+   ↓
+LangGraph
+   ↓
+Question Router
+   ↓
+Hugging Face Embedding Model
+   ↓
+Pinecone
+   ↓
+Relevant HR Documents
+   ↓
+Evidence Grader
+   ↓
+Groq
+   ↓
+Grounded Answer
+   ↓
+Employee
+```
+
+ ### External Information Question
+
+```
+Employee
+   ↓
+Web UI
+   ↓
+FastAPI
+   ↓
+LangGraph
+   ↓
+Private Pinecone Retrieval
+   ↓
+Evidence Weak
+   ↓
+Tavily
+   ↓
+Web Evidence Grading
+   ↓
+Groq
+   ↓
+External Answer + Source Information
+   ↓
+Employee
+```
+
+---
+
+ ## 20\. What Changed From the IT Support Reference
+
+ The overall application pattern remains based on the original IT Support Agentic RAG reference architecture.
+
+ The following elements were adapted for the HR domain:
+
+ - Business problem
+- HR-specific prompts
+- HR configuration names
+- HR UI terminology
+- Example questions
+- Sample HR documents
+- Knowledge-base content
+- HR workflow descriptions
+- HR document ingestion
+- HR security considerations
+- HR-focused documentation
+
+ The core technical architecture remains centered around:
+
+```
+LangGraph
+   +
+Pinecone
+   +
+Groq
+   +
+Hugging Face Embeddings
+   +
+Tavily
+   +
+FastAPI
+   +
+HTML/CSS/JavaScript
+   +
+SQLite
+   +
+Docker
+```
+
+---
+
+ ## 21. Key Learning Outcomes
+
+ After completing this project, you should understand how to build an end-to-end Agentic RAG application rather than only an isolated RAG pipeline.
+
+ You will learn:
+
+ - How to design an Agentic RAG workflow with LangGraph
+- How to build conditional agent routing
+- How to integrate a private enterprise knowledge base
+- How vector embeddings work with Pinecone
+- How to use Hugging Face embedding models
+- How to use Groq for LLM inference
+- How to evaluate retrieved evidence
+- How to implement web-search fallback
+- How to rewrite and retry weak queries
+- How to expose an agent through FastAPI
+- How to build a simple employee-facing UI
+- How to ingest new enterprise documents
+- How to implement audit and workflow tracing
+- How to package the application with Docker
+- How to think about security and productionization
+
+---
+
+ ## 22\. End-to-End Architecture Summary
+
+```
+                         ┌──────────────────────┐
+                         │    Employee / HR     │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │   Web UI             │
+                         │ HTML/CSS/JavaScript  │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │       FastAPI        │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │      LangGraph       │
+                         │  Agentic Controller  │
+                         └──────────┬───────────┘
+                                    │
+                      ┌─────────────┴─────────────┐
+                      │                           │
+                      ▼                           ▼
+             ┌─────────────────┐        ┌─────────────────┐
+             │ Hugging Face    │        │     Tavily      │
+             │ Embeddings      │        │   Web Search    │
+             └────────┬────────┘        └────────┬────────┘
+                      │                           │
+                      ▼                           │
+             ┌─────────────────┐                  │
+             │    Pinecone     │◄─────────────────┘
+             │ Private HR KB   │
+             └────────┬────────┘
+                      │
+                      ▼
+             ┌─────────────────┐
+             │ Evidence Grader │
+             └────────┬────────┘
+                      │
+                      ▼
+             ┌─────────────────┐
+             │      Groq       │
+             │ GPT-OSS-120B    │
+             └────────┬────────┘
+                      │
+                      ▼
+             ┌─────────────────┐
+             │ Grounded Answer │
+             └────────┬────────┘
+                      │
+             ┌────────┴────────┐
+             ▼                 ▼
+        Employee UI        SQLite Audit
+```
+
+---
+
+ ## 23\. Conclusion
+
+ This project demonstrates how an Agentic RAG prototype can be transformed into a practical enterprise application.
+
+ The key architectural principle is:
+
+ > **Private knowledge first, evidence grading second, external search only when necessary, and grounded generation at the end.**
+
+ By combining **LangGraph, Groq, Hugging Face Embeddings, Pinecone, Tavily, FastAPI, and a lightweight web interface**, the project provides a complete foundation for an enterprise HR Policy Copilot while demonstrating the broader responsibilities of a Forward Deployed Engineer.
