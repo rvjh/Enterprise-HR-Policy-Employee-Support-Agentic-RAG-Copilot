@@ -6,7 +6,7 @@ Here’s a clean README you can use:
 
  Follow the steps below to set up the project locally.
 
- ## 1\. Create a Virtual Environment
+## 1\. Create a Virtual Environment
 
  Create a virtual environment using `uv`:
 
@@ -14,7 +14,7 @@ Here’s a clean README you can use:
 uv venv
 ```
 
- ## 2\. Activate the Virtual Environment
+## 2\. Activate the Virtual Environment
 
  On Windows:
 
@@ -22,7 +22,7 @@ uv venv
 .venv\Scripts\activate
 ```
 
- ## 3\. Create the Project Structure
+## 3\. Create the Project Structure
 
  Run the following command to generate the project structure:
 
@@ -30,11 +30,11 @@ uv venv
 python create_project.py
 ```
 
- ## 4\. Create `__init__.py` Files
+## 4\. Create `__init__.py` Files
 
  Create `__init__.py` files in the required package/constructor directories so that Python recognizes them as packages.
 
- ## 5\. Install Dependencies
+## 5\. Install Dependencies
 
  Install the project dependencies using:
 
@@ -42,7 +42,7 @@ python create_project.py
 uv pip install -r requirements.txt
 ```
 
- ## Complete Setup
+## Complete Setup
 
  You can run the commands in the following order:
 
