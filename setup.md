@@ -5,7 +5,7 @@ for creating the project structure run
 
 python create_project.py
 
-create __init__.py for constructure files
+create '__init__.py' for constructure files
 
 then run
 

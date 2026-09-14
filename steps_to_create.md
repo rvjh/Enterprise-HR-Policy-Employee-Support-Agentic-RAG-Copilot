@@ -15,3 +15,4 @@
 14. **`static/css/style.css`** — Add styling to make the application look like a professional enterprise AI product.
 15. **`static/js/app.js`** — Connect the frontend with FastAPI and display answers, citations, source routes, execution traces, and upload results dynamically.
 16. **`run.py`** — Create the final application entry point to start the FastAPI server.
+
